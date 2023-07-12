@@ -1,160 +1,346 @@
 const asyncHandler = require('express-async-handler');
 const db = require('../models');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-const multer = require('multer')
-const path = require ('path')
+const { Op } = require('sequelize');
+const multer = require('multer');
+const path = require('path');
 
-const Agents = db.Agents;
+const fs = require('fs');
+const { Agents, ServiceProviders, User, Payment } = require('../models');
 
-// Create and save a new agent
 exports.create = asyncHandler(async (req, res) => {
-  // Validate request
-  if (
-    !req.body.agentBIN ||
-    !req.body.agentName ||
-    !req.body.agentEmail ||
-    !req.body.agentPassword ||
-    !req.body.servicesOffered ||
-    !req.body.phoneNumber ||
-    !req.file.path
-  ) {
+  //validate
+  const requiredFields = [
+    'agentBIN',
+    'agentName',
+    'agentEmail',
+    'servicesOffered',
+    'phoneNumber',
+  ];
+
+  const missingFields = requiredFields.filter((field) => !req.body[field]);
+
+  // Check if agentAuthorizationLetter field exists
+  if (!req.file || !req.file.path) {
+    missingFields.push('agentAuthorizationLetter');
+  }
+
+  if (missingFields.length > 0) {
     res.status(400).send({
-      message: 'Fields cannot be empty',
+      message: `${missingFields.join(', ')} cannot be empty`,
     });
     return;
+  
   }
-
-  // Check if agent already exists
-  const existingAgent = await Agents.findOne({
-    where: {
-      agentEmail: req.body.agentEmail,
-    },
-  });
-
-  if (existingAgent) {
-    res.status(409).send({
-      message: 'Agent already exists',
-    });
-    return;
-  }
-
-  // Hash the password
-  const hashedPassword = await bcrypt.hash(req.body.agentPassword, 10);
-
-  // Create an agent object
-  const agent = {
-    agentBIN: req.body.agentBIN,
-    agentName: req.body.agentName,
-    agentEmail: req.body.agentEmail,
-    agentPassword: hashedPassword,
-    servicesOffered: req.body.servicesOffered,
-    phoneNumber: req.body.phoneNumber,
-    agentAuthorizationLetter: req.file.path,
-  };
-
-  // Save agent in the database
-  const data = await Agents.create(agent);
-  res.send(data);
-});
-
-// Retrieve all agents from the database
-exports.findAll = asyncHandler(async (req, res) => {
-  const data = await Agents.findAll();
-  res.send(data);
-});
-
-// Find a single agent by id
-exports.findOne = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-
-  const data = await Agents.findByPk(id);
-  if (!data) {
-    res.status(404).send({
-      message: `Agent with id=${id} not found`,
-    });
-  } else {
-    res.send(data);
-  }
-});
-
-// Update an agent by id
-exports.update = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-
-  const [num] = await Agents.update(req.body, {
-    where: { id: id },
-  });
-
-  if (num === 1) {
-    res.send({
-      message: 'Agent was updated successfully.',
-    });
-  } else {
-    res.send({
-      message: `Cannot update agent with id=${id}. Agent not found or req.body is empty!`,
-    });
-  }
-});
-
-// Delete an agent by id
-exports.delete = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-
-  const num = await Agents.destroy({
-    where: { id: id },
-  });
-
-  if (num === 1) {
-    res.send({
-      message: 'Agent was deleted successfully!',
-    });
-  } else {
-    res.send({
-      message: `Cannot delete agent with id=${id}. Agent not found!`,
-    });
-  }
-});
-
-// Agent login auth
-exports.login = asyncHandler(async (req, res) => {
   try {
-    const { agentEmail, agentPassword } = req.body;
-    const agent = await Agents.findOne({
-      where: { agentEmail },
+    const {
+      agentBIN,
+      agentName,
+      agentEmail,
+      servicesOffered,
+      phoneNumber,
+      serviceProviderBIN, // Assuming you have the ID of the associated service provider
+      UserId, // Assuming you have the ID of the associated user
+      paymentId, // Assuming you have the ID of the associated payment
+    } = req.body;
+
+    // Check if agent already exists
+    const existingAgent = await Agents.findOne({
+      where: {
+        agentBIN: agentBIN,
+      },
+    });
+
+    if (existingAgent) {
+      return res.status(409).json({
+        error: 'Agent already exists',
+      });
+    }
+
+    // Check if agentAuthorizationLetter field exists
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({
+        error: 'Agent authorization letter is required',
+      });
+    }
+
+    // Create the agent
+   
+        const agent = await Agents.create({
+          agentBIN,
+          agentName,
+          agentEmail,
+          servicesOffered,
+          phoneNumber,
+          agentAuthorizationLetter: req.file.path,
+          serviceProviderBIN,
+          UserId,
+          paymentId,
+        });
+    
+        // Associate with ServiceProviders
+        if (req.body.serviceProviderBINs && req.body.serviceProviderBINs.length > 0) {
+          const serviceProviders = await ServiceProviders.findAll({
+            where: {
+              id: {
+                [Op.in]: req.body.serviceProviderBINs,
+              },
+            },
+          });
+          await agent.setServiceProviders(serviceProviders);
+        }
+    
+        // Associate with Payment
+        if (req.body.paymentIds && req.body.paymentIds.length > 0) {
+          const payments = await Payment.findAll({
+            where: {
+              id: {
+                [Op.in]: req.body.paymentIds,
+              },
+            },
+          });
+          await agent.setPayments(payments);
+        }
+    
+        // Associate with User
+        if (req.body.userIds && req.body.userIds.length > 0) {
+          const users = await User.findAll({
+            where: {
+              id: {
+                [Op.in]: req.body.userIds,
+              },
+            },
+          });
+          await agent.setUsers(users);
+        }
+    
+        // Fetch the agent with associated models
+        const data = await Agents.findByPk(agent.agentBIN, {
+          include: [
+            {
+              model: ServiceProviders,
+              as: 'ServiceProviders',
+            },
+            {
+              model: User,
+              as: 'User',
+            },
+            {
+              model: Payment,
+              as: 'Payments',
+            },
+          ],
+        });
+    
+        return res.send(data);
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+          error: 'Server error',
+        });
+      }
+    });
+
+// Update an agent
+exports.update = asyncHandler(async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const {
+      agentBIN,
+      agentName,
+      agentEmail,
+      servicesOffered,
+      phoneNumber,
+    } = req.body;
+
+    const agent = await Agents.findByPk(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+      });
+    }
+
+    agent.agentBIN = agentBIN;
+    agent.agentName = agentName;
+    agent.agentEmail = agentEmail;
+    agent.servicesOffered = servicesOffered;
+    agent.phoneNumber = phoneNumber;
+
+    // Check if a new file is uploaded
+    if (req.file && req.file.path) {
+      // Delete the previous authorization letter file
+      if (agent.agentAuthorizationLetter) {
+        fs.unlinkSync(agent.agentAuthorizationLetter);
+      }
+      agent.agentAuthorizationLetter = req.file.path;
+    }
+
+    await agent.save();
+
+    if (req.body.serviceProviderBINs && req.body.serviceProviderBINs.length > 0) {
+      const serviceProvider = await ServiceProviders.findAll({
+        where: {
+          id: {
+            [Op.in]: req.body.serviceProviderBINs,
+          },
+        },
+      });
+      if (serviceProvider) {
+        await agent.setServiceProviders(serviceProvider);
+      }
+    }
+
+    if (req.body.paymentIds && req.body.paymentIds.length > 0) {
+      const payment = await Payment.findAll({
+        where: {
+          id: {
+            [Op.in]: req.body.paymentIds,
+          },
+        },
+      });
+      if (payment) {
+        await agent.addpayment(payment);
+      }
+    }
+
+
+    if (req.body.UserIds && req.body.UserIds.length > 0) {
+      const user = await User.findAll({
+        where: {
+          id: {
+            [Op.in]: req.body.UserIds,
+          },
+        },
+      });
+      if (user) {
+        await agent.addUser(user);
+      }
+    }
+
+
+    
+    return res.send(agent);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: 'Server error',
+    });
+  }
+});
+
+// Get all agents
+exports.findAll = asyncHandler(async (req, res) => {
+  try {
+    const agents = await Agents.findAll({
+      include: [
+        {
+          model: ServiceProviders,
+          as: 'ServiceProviders',
+        },
+        {
+          model: User,
+          as: 'User',
+        },
+        {
+          model: Payment,
+          as: 'Payments',
+        },
+      ],
+    });
+
+    return res.send(agents);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: 'Server error',
+    });
+  }
+});
+
+// Get agent by ID
+
+exports.findOne = asyncHandler(async (req, res) => {
+  try {
+    const agentId = req.params.id;
+
+    const agent = await Agents.findByPk(agentId, {
+      include: [
+        {
+          model: ServiceProviders,
+          as: 'ServiceProviders',
+        },
+        {
+          model: User,
+          as: 'User',
+        },
+        {
+          model: Payment,
+          as: 'Payments',
+        },
+      ],
     });
 
     if (!agent) {
-      res.status(404).json({ error: 'Agent not found' });
-    } else {
-      const passwordMatch = await bcrypt.compare(agentPassword, agent.agentPassword);
-
-      if (!passwordMatch) {
-        res.status(401).json({ error: 'Incorrect password' });
-      } else {
-        const token = jwt.sign({ agentId: agent.id }, process.env.TOKEN_SECRET, {
-          expiresIn: '1h',
-        });
-        res.status(200).json({ message: 'Login successful', token });
-      }
+      return res.status(404).json({
+        error: 'Agent not found',
+      });
     }
+
+    return res.send(agent);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to login agent', message: error.message });
+    console.error(error);
+    return res.status(500).json({
+      error: 'Server error',
+    });
+  }
+});
+
+// Delete an agent
+exports.delete = asyncHandler(async (req, res) => {
+  try {
+    const agentId = req.params.id;
+
+    const agent = await Agents.findByPk(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+      });
+    }
+
+    // Delete the authorization letter file
+    // if (agent.agentAuthorizationLetter) {
+    //   fs.unlinkSync(agent.agentAuthorizationLetter);
+    // }
+
+    // Disassociate the agent from the service provider, user, and payment
+    await agent.setServiceProviders(null);
+    await agent.setUser(null);
+    await agent.setPayments(null);
+
+    // Delete the agent
+    await agent.destroy();
+
+    return res.status(200).json({
+      message: 'Agent deleted successfully',
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error:'Server error',
+    });
   }
 });
 
 
-// upload image
-const storage =multer.diskStorage({
-  destination:(req,file,cb)=>{
-    cb(null,'Images')
-  }, 
-  filename :(req, file, cb)=>{
-     cb(null, Date.now()+path.extname(file.originalname))
-      
-  }
-})
+// Upload image
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'Images');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
 exports.upload = multer({
   storage: storage,
   limits: { fileSize: '1000000' },
@@ -165,6 +351,6 @@ exports.upload = multer({
     if (mimeType && extname) {
       return cb(null, true);
     }
-    cb('provide the proper format');
-  }
+    cb('Provide the proper format');
+  },
 }).single('agentAuthorizationLetter');
