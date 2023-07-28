@@ -1,15 +1,16 @@
 const express = require('express');
 const userRouter = express.Router();
-
-const userController = require('../controller/UserController.js');
-
-// Define routes for user resource
-userRouter.post('/', userController.create);
-userRouter.get('/', userController.findAll);
-userRouter.get('/:id', userController.findOne);
-userRouter.put('/:id', userController.update);
-userRouter.delete('/:id', userController.delete);
-userRouter.post('/:id', userController.login);
+const UserController = require('../controller/UserController.js');
 
 
-module.exports = userRouter;
+userRouter.post('/',UserController.upload,UserController.create)
+userRouter.post('/login', UserController.login)
+userRouter.post('/verifyResetToken', UserController.verifyResetToken)
+userRouter.post('/updatePasswordWithToken', UserController.updatePasswordWithToken )
+userRouter.get('/', UserController.findAll)
+userRouter.get('/:id', UserController.findOne);
+userRouter.get('/serviceNo/:serviceNo', UserController.findOneByServiceNo);
+userRouter.put('/:id', UserController.upload, UserController.update)
+userRouter.delete('/:id', UserController.delete)
+userRouter.post('/requestPasswordReset', UserController.requestPasswordReset);
+module.exports= userRouter;
