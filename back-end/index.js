@@ -2,23 +2,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-
-
 const cors = require('cors');
 const app = express();
 
 var corOptions = {
-  origin: 'https://localhost:3306'
+  origin: 'https://localhost:3001'
 }
 
 //middleware
-app.use(cors(corOptions))
+app.use(cors())
 app.use(bodyParser.json())
 app.use(express.json())
 app.use(express.urlencoded({extended : true}))
-
-
-
 
 //
 const db = require('./models/index.js')
@@ -27,47 +22,47 @@ db.sequelize.sync();
 db.sequelize.sync({force: false })
 .then(() => {
 
-  console.log('DB connected and it is working');
+  console.log('it is working');
 }); 
 
 // Import controllers
 const billController = require('./controller/billController.js')
 const serviceController = require('./controller/serviceProviderController.js')
-const paymentController = require('./controller/paymentController.js');
-const userController = require('./controller/userController.js');
+const paymentController = require('./controller/PaymentController.js');
+const userController = require('./controller/UserController.js');
 const AgentController = require('./controller/agentController.js');
+const AdminLoginController = require('./controller/AdminLoginController.js')
 
 // Import routes
 
-const billsRouter = require('./routes/billRoute.js')
+const billsRouter = require('./routes/billRoutes.js')
 const serviceProvidersRouter = require('./routes/serviceProviderRoute.js');
-const paymentRouter = require('./routes/paymentRoute.js');
+const paymentRouter = require('./routes/paymentRoutes.js');
 const usersRouter = require('./routes/userRoute.js');
-const AgentsRouter = require('./routes/agentRoute.js');
+const AgentsRouter = require('./routes/agentRoutes.js');
+const AdminRouter = require('./routes/AdminRoutes.js')
 
 // Mount routes
-app.use('/bill', billsRouter);
-app.use('/serviceProvider', serviceProvidersRouter);
+app.use('/bills', billsRouter);
+app.use('/serviceproviders', serviceProvidersRouter);
 app.use('/payment', paymentRouter);
 
 
-app.use('/user', usersRouter);
-app.use('/agent', AgentsRouter);
-app.use ('/Images',express.static('./Images'))
+app.use('/Users', usersRouter);
+app.use('/agents', AgentsRouter);
+app.use('/api/admin', AdminRouter);
+app.use ('/Images',express.static('./Images'));
 
 
 
 //testing api
 app.get('/',(req,res)=>{
-  res.json({message: 'hello there'})
-})
-app.post('/',(req,res)=>{
-  res.json({message: 'hello from post....'})
+  res.json({message: 'Welcome to epayment'})
 })
 
 //Port
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3000
 
 
 // start server
@@ -76,8 +71,7 @@ app.listen(PORT, () => {
 });
 
 
-
-// app.use('/agents', AgentController);
+// app.use('/agents', agentController);
 // app.use('/bills', billController);
 // app.use('/payments', paymentController);
 // app.use('/services', serviceController);
@@ -89,10 +83,7 @@ app.listen(PORT, () => {
 // start server
 // app.listen(PORT, () => {
 
-
-
 //   console.log(Server started on port ${PORT});
-
 
 
 //   connection.connect(function(err){
