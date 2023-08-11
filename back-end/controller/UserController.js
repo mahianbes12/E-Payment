@@ -1,5 +1,8 @@
 const asyncHandler = require('express-async-handler');
 const db = require('../models');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const User = db.User;
 
@@ -21,6 +24,22 @@ exports.create = asyncHandler(async (req, res) => {
     return;
   }
 
+   // Check if user already exists
+   const existingUser = await User.findOne({
+    where: {
+      Email: req.body.Email,
+    },
+  });
+
+  if (existingUser) {
+    res.status(409).send({
+      message: 'User already exists',
+    });
+    return;
+  }
+  // Hash the password
+  const hashedPassword = await bcrypt.hash(req.body.Password, 10);
+
   // Create a user object
   const user = {
     UserID: req.body.UserID,
@@ -28,7 +47,7 @@ exports.create = asyncHandler(async (req, res) => {
     LastName: req.body.LastName,
     Gender: req.body.Gender,
     UserName: req.body.UserName,
-    Password: req.body.Password,
+    Password: hashedPassword,
     Email: req.body.Email,
     PhoneNumber: req.body.PhoneNumber,
     Address: req.body.Address
@@ -97,3 +116,28 @@ exports.delete = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// User login auth
+exports.login = asyncHandler(async (req, res) => {
+    try {
+      const { Email, Password } = req.body;
+      const user = await User.findOne({ 
+        where: { Email } 
+    });
+  
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+      } else {
+        const passwordMatch = await bcrypt.compare(Password, user.Password);
+  
+        if (!passwordMatch) {
+          res.status(401).json({ error: 'Incorrect password' });
+        } else {
+          const token = jwt.sign({ userId: user.id }, process.env.TOKEN_SECRET, { expiresIn: '1h' });
+          res.status(200).json({ message: 'Login successful', token });
+        }
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to login user', message: error.message });
+    }
+  });
