@@ -1,7 +1,7 @@
 module.exports = {
     HOST: 'localhost',
     USER: 'root',
-    PASSWORD: '12345678',
+    PASSWORD: '123456789',
     DB: 'epayment',
     dialect: 'mysql',
     pool: {

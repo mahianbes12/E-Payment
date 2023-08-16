@@ -43,7 +43,7 @@ module.exports = (sequelize, Sequelize) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    TotalAmount: {
+    totalAmount: {
       type: DataTypes.FLOAT,
       allowNull: false
     }

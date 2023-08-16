@@ -6,9 +6,10 @@ const Payment = db.payment;
 // Create and save a new payment
 exports.create = asyncHandler(async (req, res) => {
   // Validate request
-  if (!req.body.paymentID || !req.body.paymentDate || !req.body.status || !req.body.amount || !req.body.referenceNumber) {
+  if (!req.body.paymentID || !req.body.paymentDate || !req.body.status || !req.body.amount || !req.body.payerID ||
+    !req.body.payeeID || !req.body.paymentMethod || !req.body.paymentDescription || !req.body.receiptNumber) {
     res.status(400).send({
-      message: 'Payment ID, payment date, status, amount, and reference number cannot be empty',
+      message: 'Payment ID, payment date, status, amount, payer ID, payee ID, payment method, payment description, and receipt number cannot be empty',
     });
     return;
   }
@@ -19,7 +20,11 @@ exports.create = asyncHandler(async (req, res) => {
     paymentDate: req.body.paymentDate,
     status: req.body.status,
     amount: req.body.amount,
-    referenceNumber: req.body.referenceNumber
+    payerID: req.body.payerID,
+    payeeID: req.body.payeeID,
+    paymentMethod: req.body.paymentMethod,
+    paymentDescription: req.body.paymentDescription,
+    receiptNumber: req.body.receiptNumber
   };
 
   // Save payment in the database
@@ -40,7 +45,7 @@ exports.findOne = asyncHandler(async (req, res) => {
   const data = await Payment.findByPk(id);
   if (!data) {
     res.status(404).send({
-      message: (`Payment with ID ${id} not found`),
+      message: `Payment with ID ${id} not found`,
     });
   } else {
     res.send(data);
@@ -61,7 +66,7 @@ exports.update = asyncHandler(async (req, res) => {
     });
   } else {
     res.send({
-      message: (`Cannot update payment with ID ${id}. Payment not found or request body is empty`),
+      message: `Cannot update payment with ID ${id}. Payment not found or request body is empty`,
     });
   }
 });
@@ -80,7 +85,7 @@ exports.delete = asyncHandler(async (req, res) => {
     });
   } else {
     res.send({
-      message: (`Cannot delete payment with ID ${id}. Payment not found`),
+      message: `Cannot delete payment with ID ${id}. Payment not found`,
     });
   }
 });
