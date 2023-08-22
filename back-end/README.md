@@ -1,5 +1,3 @@
-Sure, here's an example of a README.md file for a back-end Express.js application:
-
 # Project Name
 
 This is a back-end project built with Express.js.
