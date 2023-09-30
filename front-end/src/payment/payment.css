@@ -1,0 +1,115 @@
+ .input-container {
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    /* display: flex;
+    flex-direction: column; */
+    padding: 15px;
+    /* align-items: center; */
+    margin-bottom: 16px;
+    width: 600px;
+  }
+  
+  .input-container input {
+    width: 500px;
+    margin-top: 8px;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px;
+    /* display: flex;
+    flex-direction: column; */
+    /* align-items:inherit; */
+  }
+  
+  .bill-container {
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    padding: 15px;
+    margin-bottom: 20px;
+    width: 600px;
+  }
+  
+  .bill-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .bill-details {
+    display: flex;
+    /* flex-direction: column; */
+    flex-wrap:nowrap;
+    margin-bottom: 10px;
+  }
+  
+ .bill-section {
+    /* flex: 0 0 50%; */
+    display:flex;
+    flex-direction: column;
+    padding-right: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .bill-section h4 {
+    margin-bottom: 5px;
+  }
+  
+  .pay-btn {
+    margin-top: 10px;
+  }
+
+  .pay {
+    margin-top: 10px;
+  }
+  
+  .shorter-input {
+    width: 800px;
+    margin-bottom: 10px;
+  }
+
+  /* Custom Select CSS */
+.custom-select {
+  width: 500px;
+  height:32px;
+  margin-bottom: 10px;
+  position: relative;
+  display: inline-block;
+}
+
+.custom-select select {
+  appearance: none;
+  background-color: transparent;
+  border: 1px solid #d9d9d9;
+  padding: 8px 30px 8px 10px;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: #595959;
+  width: 200px;
+  cursor: pointer;
+}
+
+.custom-select select::-ms-expand {
+  display: none;
+}
+
+.custom-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #595959;
+  pointer-events: none;
+}
+
+.custom-select select:focus {
+  outline: none;
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
